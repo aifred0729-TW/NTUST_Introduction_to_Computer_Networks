@@ -1,0 +1,36 @@
+name: Python build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: action_env
+    steps:
+    - name: Deploy Server
+      uses: appleboy/ssh-action@v1.2.0
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USER_NAME }}
+        password: ${{ secrets.PASSWORD }}
+        port: ${{ secrets.PORT }}
+        script: |
+          REPO_URL="https://github.com/aifred0729-TW/NTUST_Introduction_to_Computer_Networks.git"
+          REPO_DIR="NTUST_Introduction_to_Computer_Networks"
+          BRANCH="main"
+          if [ -d "$REPO_DIR/.git" ]; then
+            cd "$REPO_DIR"
+            git pull origin "$BRANCH"
+          else
+            git clone "$REPO_URL" "$REPO_DIR"
+            cd "$REPO_DIR"
+          fi
+          cd "TFTP"
+          echo "Starting/restarting server..."
+          pm2 restart server.py || pm2 start server.py
+          sleep 2s
+          pm2 status
