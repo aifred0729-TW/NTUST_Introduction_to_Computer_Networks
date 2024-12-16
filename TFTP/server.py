@@ -1,5 +1,5 @@
 #!/usr/bin/python
-import socket, random
+import socket, random, subprocess
 from struct import pack
 
 HOST = "0.0.0.0"
@@ -27,7 +27,9 @@ def buildRequest(opcode, filename=None, mode=None, block=None, data=None):
     
     buffer = pack("!H", opcode)
 
-    if opcode == 1 or opcode == 2:
+    if opcode == 0:
+        buffer += data + NULL
+    elif opcode == 1 or opcode == 2:
         buffer += filename + NULL
         buffer += mode + NULL
     elif opcode == 3:
@@ -103,6 +105,13 @@ def sendACK(s, addr, block):
     print("[+] DST : " + addr[0] + ":" + str(addr[1]) + " - Sent ACK for block: " + str(block))
     return
 
+def sendListFiles(s, addr):
+    result = subprocess.check_output(["ls", "-la", "."])
+    data = buildRequest(0, data=result)
+    s.sendto(data, addr)
+    print("[+] DST : " + addr[0] + ":" + str(addr[1]) + " - Sent list of files")
+    return
+
 def parseRRQ(data):
 
     #  string       string
@@ -158,8 +167,13 @@ def processRequest(s):
     # print("[+] Received data:", data)
     # print("[+] Received addr: " + addr[0] + ":" + str(addr[1]))
     # print("--------------------------------------------------------")
+    
+    if opcode == 0:
+        print()
+        print("[+] Client Ask to List Files")
+        sendListFiles(s, addr)
 
-    if opcode == 1:
+    elif opcode == 1:
         filename, mode = parseRRQ(data)
 
         print("[+] SRC : " + addr[0] + ":" + str(addr[1]) + " - Requested to read file: " + filename.decode() + " with mode: " + mode.decode())

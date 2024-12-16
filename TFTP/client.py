@@ -27,7 +27,9 @@ def buildRequest(opcode, filename=None, mode=None, block=None, data=None):
     
     buffer = pack("!H", opcode)
 
-    if opcode == 1 or opcode == 2:
+    if opcode == 0:
+        pass
+    elif opcode == 1 or opcode == 2:
         buffer += filename + NULL
         buffer += mode + NULL
     elif opcode == 3:
@@ -159,7 +161,13 @@ def processRequest(s):
     # print("[+] Received addr: " + addr[0] + ":" + str(addr[1]))
     # print("--------------------------------------------------------")
 
-    if opcode == 1:
+    if opcode == 0:
+        
+        print("[+] Received response from server")  
+        print("[+] DST : " + addr[0] + ":" + str(addr[1]) + " - Sent list of files")
+        print(data.decode())
+        
+    elif opcode == 1:
         filename, mode = parseRRQ(data)
 
         print("[+] SRC : " + addr[0] + ":" + str(addr[1]) + " - Requested to read file: " + filename.decode() + " with mode: " + mode.decode())
@@ -191,12 +199,25 @@ def processRequest(s):
 
 if __name__ == "__main__":
 
-    if len(sys.argv) < 3:
+    if len(sys.argv) < 3 and sys.argv[1] != "ls":
         print("[!] Usage: python client.py {option} {filename}")
         print("[!] Option: 0 = read | 1 = write")
+        print("[!] Filename: file to read or write")
+        print("[!] Special Option: ls")
         sys.exit(1)
 
     s = initialize()
+    
+    if sys.argv[1] == "ls":
+        print("[+] Sending request to " + HOST + " on port " + str(PORT))
+        print("[+] Request to list files")
+
+        data = buildRequest(0)
+        s.sendto(data, (HOST, PORT))
+        processRequest(s)
+        s.close()
+        sys.exit(0)
+
     filename = sys.argv[2].encode()
 
     if sys.argv[1] == "0":
@@ -224,3 +245,4 @@ if __name__ == "__main__":
         print("[+] Received response from server: " + data.decode())
         s.close()
         sys.exit(0)
+    
