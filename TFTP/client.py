@@ -1,8 +1,11 @@
 #!/usr/bin/python
 import socket, random, sys
 from struct import pack
+import json
+import http.client
 
-HOST = "127.0.0.1"
+HOST = "3.89.174.161"
+API = "sgco35x5eskiebz62erpoy5sqy0sgxne.lambda-url.us-east-1.on.aws"
 PORT = 69
 NULL = b'\0'
 
@@ -197,13 +200,25 @@ def processRequest(s):
     print("____________________________________________________")
     return
 
-if __name__ == "__main__":
+def requestServer(action):
+    conn = http.client.HTTPSConnection(API)
+    payload = json.dumps({
+      "action": action
+    })
+    headers = {
+      'Content-Type': 'application/json'
+    }
+    conn.request("POST", "/", payload, headers)
+    res = conn.getresponse()
+    data = res.read()
+    return json.loads(data.decode("utf-8"))["body"]
 
-    if len(sys.argv) < 3 and sys.argv[1] != "ls":
+if __name__ == "__main__":
+    if len(sys.argv) < 3 and not (len(sys.argv) > 1 and (sys.argv[1] == "ls" or sys.argv[1] == "start" or sys.argv[1] == "stop" or sys.argv[1] == "state")):
         print("[!] Usage: python client.py {option} {filename}")
         print("[!] Option: 0 = read | 1 = write")
         print("[!] Filename: file to read or write")
-        print("[!] Special Option: ls")
+        print("[!] Special Option: ls | start | stop | state")
         sys.exit(1)
 
     s = initialize()
@@ -217,6 +232,25 @@ if __name__ == "__main__":
         processRequest(s)
         s.close()
         sys.exit(0)
+    elif sys.argv[1] == "start":
+        print("[+] Sending request to " + HOST + " on port " + str(PORT))
+        print("[+] Server Starting")
+        requestServer("start")
+        print("[+] Server Running")
+        sys.exit(1)
+    elif sys.argv[1] == "stop":
+        print("[+] Sending request to " + HOST + " on port " + str(PORT))
+        print("[+] Server Stopping")
+        requestServer("stop")
+        print("[+] Server Stopped")
+        sys.exit(1)
+    elif sys.argv[1] == "state":
+        print("[+] Sending request to " + HOST + " on port " + str(PORT))
+        print("[+] Server State")
+        res = requestServer("state")
+        print(f"State: {res["State"]}")
+        print(f"PublicIpAddress: {res["PublicIpAddress"]}")
+        sys.exit(1)
 
     filename = sys.argv[2].encode()
 
